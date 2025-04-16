@@ -22,9 +22,31 @@ BREAK_DISTANCE = 200
 AIM_Y_OFFSET = 0.35  # 0.35 = haut du torse, 0.15 = tête
 
 def move_mouse(x, y):
-    """Déplace la souris à une position écran (pixels absolus)"""
-    ctypes.windll.user32.SetCursorPos(x, y)
-    print(f"🎯 Souris déplacée à ({x}, {y})")
+    screen_width = ctypes.windll.user32.GetSystemMetrics(0)
+    screen_height = ctypes.windll.user32.GetSystemMetrics(1)
+
+    abs_x = int(x * 65535 / screen_width)
+    abs_y = int(y * 65535 / screen_height)
+
+    class MouseInput(ctypes.Structure):
+        _fields_ = [
+            ("dx", ctypes.c_long),
+            ("dy", ctypes.c_long),
+            ("mouseData", ctypes.c_ulong),
+            ("dwFlags", ctypes.c_ulong),
+            ("time", ctypes.c_ulong),
+            ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+        ]
+
+    class Input(ctypes.Structure):
+        _fields_ = [("type", ctypes.c_ulong), ("mi", MouseInput)]
+
+    mi = MouseInput(abs_x, abs_y, 0, 0x0001 | 0x8000, 0, None)  # MOVE + ABSOLUTE
+    inp = Input(0, mi)
+
+    ctypes.windll.user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(inp))
+    print(f"🎯 [SendInput] Souris déplacée à ({x}, {y}) → abs=({abs_x}, {abs_y})")
+
 
 def capture_screen():
     """Capture une zone centrale de l’écran"""
